@@ -1,0 +1,23 @@
+{
+  "name": "thing-it-device-yamaha",
+  "version": "0.1.0",
+  "description": "[thing-it-node] Device Plugin for Yamaha amps.",
+  "authors": "Klaus Berberich",
+  "license": "MIT",
+  "keywords": [
+    "IoT",
+    "thing-it",
+    "Yamaha",
+    "SmartHome",
+    "Entertainment",
+    "Music"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/klausberberich/thing-it-device-yamaha"
+  },
+  "dependencies": {
+    "q": "~1.4.1",
+    "yamaha-nodejs": "^0.4.2"
+  }
+}
