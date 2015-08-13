@@ -14,7 +14,8 @@ yamaha.isSimulated = function () {
 yamaha.configuration = {
     simulated: false,
     host: "10.0.1.10",
-    name: "Livingroom V573"
+    name: "Livingroom V573",
+    updateInterval: "1000"
 };
 yamaha.publishEvent = function(event, data){
     console.log("Event", event);
@@ -41,3 +42,36 @@ console.log("About to start");
 yamaha.start();
 
 
+/* Tested successfully
+setTimeout(function(){
+    yamaha.mute();
+}, 10000);
+
+setTimeout(function(){
+    yamaha.mute();
+}, 14000);
+
+setTimeout(function(){
+    yamaha.setVolume(-310);
+}, 10000);
+
+setTimeout(function(){
+    yamaha.setVolume(-305);
+}, 14000);
+
+setTimeout(function(){
+    yamaha.setInput("AUDIO");
+}, 10000);
+
+setTimeout(function(){
+    yamaha.setInput("HDMI1");
+}, 20000);
+
+setTimeout(function(){
+    yamaha.powerOff();
+}, 6000);
+
+setTimeout(function(){
+    yamaha.powerOn();
+}, 12000);
+ */
