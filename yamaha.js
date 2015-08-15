@@ -6,6 +6,18 @@ module.exports = {
         tangible: true,
         discoverable: true,
         state: [{
+            id: "name",
+            label: "Name",
+            type: {
+                id: "string"
+            }
+        }, {
+            id: "modelName",
+            label: "Model Name",
+            type: {
+                id: "string"
+            }
+        }, {
             id: "on",
             label: "On",
             type: {
@@ -29,6 +41,18 @@ module.exports = {
             type: {
                 id: "boolean"
             }
+        }, {
+            id: "muted",
+            label: "Muted",
+            type: {
+                id: "boolean"
+            }
+        }, {
+            id: "availableInputs",
+            label: "Available Inputs",
+            type: {
+                id: "Object"
+            }
         }],
         actorTypes: [],
         sensorTypes: [],
@@ -39,13 +63,16 @@ module.exports = {
             id: "powerOff",
             label: "Power Off"
         }, {
+            id: "power",
+            label: "power"
+        }, {
             id: "mute",
             label: "Mute"
         }, {
             id: "setInput",
             label: "Set Input"
         }, {
-            id: "setVaolume",
+            id: "setVolume",
             label: "Set Volume"
         }],
         configuration: [{
@@ -70,7 +97,7 @@ module.exports = {
             id: "updateInterval",
             label: "Update Interval",
             type: {
-                id: "number"
+                id: "integer"
             }
         }]
     },
@@ -123,6 +150,8 @@ function Yamaha() {
             muted: false
         };
 
+        this.ignoreUpdate = false;
+
         this.logDebug("Yamaha state: " + JSON.stringify(this.state));
 
         if (!this.isSimulated()) {
@@ -161,14 +190,17 @@ function Yamaha() {
      *
      */
     Yamaha.prototype.readStatus = function () {
-        this.yamaha.getBasicInfo().done(function(basicInfo) {
-            this.state.volume = basicInfo.getVolume();
-            this.state.muted = basicInfo.isMuted();
-            this.state.on = basicInfo.isOn();
-            this.state.input = basicInfo.getCurrentInput();
+        this.logDebug("Reading status, ignore flag set to ", this.ignoreUpdate);
+        if (!this.ignoreUpdate){
+            this.yamaha.getBasicInfo().done(function(basicInfo) {
+                this.state.volume = Math.round(basicInfo.getVolume() / 10);
+                this.state.muted = Boolean(basicInfo.isMuted());
+                this.state.on = Boolean(basicInfo.isOn());
+                this.state.input = basicInfo.getCurrentInput();
 
-            this.publishStateChange();
-        }.bind(this));
+                this.publishStateChange();
+            }.bind(this));
+        }
     }
 
     /**
@@ -185,6 +217,42 @@ function Yamaha() {
      */
     Yamaha.prototype.connect = function () {
         this.readStatus();
+
+        this.yamaha.getSystemConfig().done(function(config){
+            try {
+                this.state.modelName = config.YAMAHA_AV.System[0].Config[0].Model_Name[0];
+            } catch (e) {
+                this.logError("Error reading model name", e);
+            }
+
+            this.state.availableInputs = [];
+            var count = 0;
+
+            // doesnt return AUDIO in the list, though it is available.
+            this.state.availableInputs[count++] = {displayName: "AUDIO", id: "AUDIO"};
+
+            try {
+                for (var n in config.YAMAHA_AV.System[0].Config[0].Name[0].Input[0]) {
+                    this.state.availableInputs[count++] = {
+                        displayName: config.YAMAHA_AV.System[0].Config[0].Name[0].Input[0][n][0].trim(),
+                        id: n.replace("_", "")
+                    };
+                }
+
+                this.logInfo("Found available inputs", this.state.availableInputs);
+                this.publishStateChange();
+            } catch (e) {
+                this.logError("Error reading inputs", e);
+            }
+        }.bind(this));
+
+        // kills sonos devices on the same network!
+        /*
+        this.yamaha.getAvailableInputs().done(function(inputs){
+            this.logInfo(config);
+        }.bind(this));
+        */
+
         this.registerEvents();
     }
 
@@ -209,16 +277,52 @@ function Yamaha() {
      * Switch On
      */
     Yamaha.prototype.powerOn = function(){
-        this.yamaha.powerOn();
-        this.readStatus();
+        this.logInfo("Switching on");
+        this.state.on = true;
+        this.ignoreUpdate = true;
+        setInterval(function(){
+            this.ignoreUpdate = false;
+        }.bind(this), 2500);
+        this.publishStateChange();
+
+        if (!this.isSimulated()){
+            this.yamaha.powerOn();
+        }
     }
 
     /**
      * Switch Off
      */
     Yamaha.prototype.powerOff = function(){
-        this.yamaha.powerOff();
-        this.readStatus();
+        this.logDebug("Switching off");
+        this.state.on = false;
+        this.ignoreUpdate = true;
+        setInterval(function(){
+            this.ignoreUpdate = false;
+        }.bind(this), 2500);
+        this.publishStateChange();
+
+        if (!this.isSimulated()){
+            this.yamaha.powerOff();
+        }
+    }
+
+    /**
+     * Power (toggles power)
+     */
+    Yamaha.prototype.power = function(){
+        /*
+        @TODO figure out UI issue where the toggle switches back and forth
+         */
+        this.logDebug("Power On", this.state.on);
+        if (this.state.on){
+            this.powerOff();
+        }
+        else {
+            this.powerOn();
+        }
+
+        this.publishStateChange();
     }
 
     /**
@@ -268,8 +372,8 @@ function Yamaha() {
      *
      */
     Yamaha.prototype.changeVolume = function (parameters) {
-        this.logDebug("Yamaha changeVolume called");
-        this.setVolume(parameters.level)
+        this.logInfo("Yamaha changeVolume called: ", parameters);
+        this.setVolume(parameters.level);
     };
 
 
@@ -277,10 +381,15 @@ function Yamaha() {
      *
      */
     Yamaha.prototype.setVolume = function(volume){
-        this.state.volume = volume;
+        if (typeof volume === 'string' || volume instanceof String){
+            this.state.volume = parseInt(volume);
+        }
+        else
+            this.state.volume = volume;
 
         if (!this.isSimulated()) {
-            this.yamaha.setVolumeTo(this.state.volume);
+            this.logInfo("Volume", this.state.volume, (typeof this.state.volume), volume);
+            this.yamaha.setVolumeTo(this.state.volume * 10);
         }
 
         this.publishStateChange();

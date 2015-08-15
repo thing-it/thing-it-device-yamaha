@@ -1,21 +1,35 @@
 <div style="width: 100%; display: table;">
     <div style="display: table-cell; text-align: center;">
-        <table style="width: 100%; margin-left: 20px; margin-right: 20px;">
+        <table style="width: 100%">
             <tr>
-                <td colspan="2" style="text-align: center;">{{component._configuration.name}} at {{component._configuration.host}}</td>
+                <td style="width: 20px; padding-right: 10px;">
+                    <ti-switch ti-model="component._state.on" ti-change="panel.callDeviceService(component, 'power')"></ti-switch>
+                </td>
+                <td style="text-align: center;">{{component._state.availableInputs}}</td>
+                <td ><select ng-model=“component._state.input”
+                                        ng-options=“input.id as input.displayName for input in component._state.availableInputs”>
+                </select>
+                </td>
             </tr>
             <tr>
-                <td style="width: 85%">
-                    <input ti-slider=""
-                           ti-model="component._state.volume" ti-min="0" ti-max="100"
-                           ti-change="panel.callDeviceService(component, 'changeVolume', {level: component._state.volume} )">
+                <td colspan="3">
+                    <table style="width: 100%">
+                        <tr>
+                            <td style="width: 85%">
+                                <input ti-slider=""
+                                       ti-model="component._state.volume" ti-min="-80" ti-max="0"
+                                       ti-change="panel.callDeviceService(component, 'changeVolume', {level: component._state.volume} )">
 
+                            </td>
+                            <td style="width: 15%; text-align: center;"><a ng-show="component._state.muted"
+                                                                           ng-click="panel.callDeviceService(component, 'mute')"><i
+                                    class="fa fa-volume-off"></i></a>
+                                <a ng-hide="component._state.muted" ng-click="panel.callDeviceService(component, 'mute')"><i
+                                        class="fa fa-volume-up"></i></a>
+                            </td>
+                        </tr>
+                    </table>
                 </td>
-                <td style="width: 15%; text-align: center;"><a ng-show="component._state.muted"
-                                                               ng-click="panel.callDeviceService(component, 'mute')"><i
-                        class="fa fa-volume-off"></i></a>
-                    <a ng-hide="component._state.muted" ng-click="panel.callDeviceService(component, 'mute')"><i
-                            class="fa fa-volume-up"></i></a></td>
             </tr>
         </table>
     </div>

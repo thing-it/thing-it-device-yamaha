@@ -52,11 +52,11 @@ setTimeout(function(){
 }, 14000);
 
 setTimeout(function(){
-    yamaha.setVolume(-310);
+    yamaha.setVolume(-31);
 }, 10000);
 
 setTimeout(function(){
-    yamaha.setVolume(-305);
+    yamaha.setVolume(-30);
 }, 14000);
 
 setTimeout(function(){
