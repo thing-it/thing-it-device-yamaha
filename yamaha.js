@@ -204,8 +204,9 @@ function Yamaha() {
             }
         }
         else {
-            this.logInfo("Current state - on:" + this.state.on + ", input: " + this.state.input
+            this.logDebug("Current state - on:" + this.state.on + ", input: " + this.state.input
                 + ", volume: " + this.state.volume + ", muted: " + this.state.muted);
+            this.publishStateChange();
         }
     }
 
@@ -409,10 +410,10 @@ function Yamaha() {
             this.state.volume = volume;
 
         if (!this.isSimulated()) {
-            this.logInfo("Volume", this.state.volume, (typeof this.state.volume), volume);
             this.yamaha.setVolumeTo(this.state.volume * 10);
         }
 
+        this.logDebug("Volume", this.state.volume, (typeof this.state.volume), volume);
         this.publishStateChange();
     }
 
@@ -426,7 +427,7 @@ function Yamaha() {
             modelName: "RX-V573",
             on: true,
             input: "HDMI1",
-            volume: 25,
+            volume: -25,
             muted: false,
             availableInputs: [
                 { displayName: 'AUDIO', id: 'AUDIO' },
