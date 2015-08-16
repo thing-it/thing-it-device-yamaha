@@ -92,7 +92,8 @@ module.exports = {
             label: "Update Interval",
             type: {
                 id: "integer"
-            }
+            },
+            defaultValue: 1000
         }]
     },
 
@@ -147,6 +148,7 @@ function Yamaha() {
             availableInputs: []
         };
 
+        this.configuration.updateInterval = (1000 > this.configuration.updateInterval ? 1000 : this.configuration.updateInterval);
         this.ignoreUpdate = false;
 
         this.logDebug("Yamaha state: ", this.state);
