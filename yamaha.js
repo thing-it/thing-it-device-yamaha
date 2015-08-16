@@ -42,12 +42,6 @@ module.exports = {
                 id: "boolean"
             }
         }, {
-            id: "muted",
-            label: "Muted",
-            type: {
-                id: "boolean"
-            }
-        }, {
             id: "availableInputs",
             label: "Available Inputs",
             type: {
@@ -144,15 +138,19 @@ function Yamaha() {
         var deferred = q.defer();
 
         this.state = {
+            name: null,
+            modelName: null,
             on: false,
             input: null,
             volume: 0,
-            muted: false
+            muted: false,
+            availableInputs: []
         };
 
         this.ignoreUpdate = false;
 
-        this.logDebug("Yamaha state: " + JSON.stringify(this.state));
+        this.logDebug("Yamaha state: ", this.state);
+        this.logDebug("Yamaha configuration: ", this.configuration);
 
         if (!this.isSimulated()) {
             this.logInfo("Starting up Yamaha.");
@@ -167,7 +165,7 @@ function Yamaha() {
         } else {
             this.logInfo("Starting up simulated Yamaha.");
             deferred.resolve();
-            //this.initiateSimulation();
+            this.initiateSimulation();
         }
 
         return deferred.promise;
@@ -180,7 +178,8 @@ function Yamaha() {
         this.logInfo("Scanning for Yamaha Host " + this.configuration.host + " started.");
         var deferred = q.defer();
         this.yamaha = new YamahaNodeJs(this.configuration.host);
-        this.logInfo("Connected to host " + this.configuration.host + ".");
+        this.logInfo("Connected to host " + this.configuration.name + " (" + this.configuration.host + ").");
+        this.state.name = this.configuration.name;
         deferred.resolve();
         this.connect();
         return deferred.promise;
@@ -191,15 +190,22 @@ function Yamaha() {
      */
     Yamaha.prototype.readStatus = function () {
         this.logDebug("Reading status, ignore flag set to ", this.ignoreUpdate);
-        if (!this.ignoreUpdate){
-            this.yamaha.getBasicInfo().done(function(basicInfo) {
-                this.state.volume = Math.round(basicInfo.getVolume() / 10);
-                this.state.muted = Boolean(basicInfo.isMuted());
-                this.state.on = Boolean(basicInfo.isOn());
-                this.state.input = basicInfo.getCurrentInput();
 
-                this.publishStateChange();
-            }.bind(this));
+        if (!this.isSimulated()) {
+            if (!this.ignoreUpdate) {
+                this.yamaha.getBasicInfo().done(function (basicInfo) {
+                    this.state.volume = Math.round(basicInfo.getVolume() / 10);
+                    this.state.muted = Boolean(basicInfo.isMuted());
+                    this.state.on = Boolean(basicInfo.isOn());
+                    this.state.input = basicInfo.getCurrentInput();
+
+                    this.publishStateChange();
+                }.bind(this));
+            }
+        }
+        else {
+            this.logInfo("Current state - on:" + this.state.on + ", input: " + this.state.input
+                + ", volume: " + this.state.volume + ", muted: " + this.state.muted);
         }
     }
 
@@ -207,9 +213,8 @@ function Yamaha() {
      *
      */
     Yamaha.prototype.registerEvents = function () {
-        this.logDebug("Registering for zone events.");
+        this.logDebug("Initiating updates with interval", this.configuration.updateInterval);
         setInterval(Yamaha.prototype.readStatus.bind(this), this.configuration.updateInterval);
-        this.logInfo("Done registering events.");
     }
 
     /**
@@ -226,6 +231,7 @@ function Yamaha() {
             }
 
             this.state.availableInputs = [];
+            this.logInfo("Type: " + (typeof this.state.availableInputs));
             var count = 0;
 
             // doesnt return AUDIO in the list, though it is available.
@@ -326,11 +332,26 @@ function Yamaha() {
     }
 
     /**
-     * Switch Off
+     * Set input. Only allow inputs that are in the availableInputs state
      */
     Yamaha.prototype.setInput = function(input){
-        this.yamaha.setMainInputTo(input);
-        this.readStatus();
+        this.logDebug("Checking if  " + input + " is in input Array with length of "
+            + this.state.availableInputs.length);
+
+        for	(index = 0; index < this.state.availableInputs.length; index++) {
+            if (input == this.state.availableInputs[index].id){
+                this.logInfo("Setting input to " + this.state.availableInputs[index].displayName
+                    + " (" + this.state.availableInputs[index].id + ").");
+                this.state.input = this.state.availableInputs[index].id;
+                this.readStatus();
+
+                if (!this.isSimulated()) {
+                    this.yamaha.setMainInputTo(this.state.availableInputs[index].id);
+                }
+
+                break;
+            }
+        }
     }
 
     /**
@@ -372,7 +393,7 @@ function Yamaha() {
      *
      */
     Yamaha.prototype.changeVolume = function (parameters) {
-        this.logInfo("Yamaha changeVolume called: ", parameters);
+        this.logDebug("ChangeVolume called: ", parameters);
         this.setVolume(parameters.level);
     };
 
@@ -400,7 +421,54 @@ function Yamaha() {
      *
      */
     Yamaha.prototype.initiateSimulation = function(){
+        this.state = {
+            name: this.configuration.name,
+            modelName: "RX-V573",
+            on: true,
+            input: "HDMI1",
+            volume: 25,
+            muted: false,
+            availableInputs: [
+                { displayName: 'AUDIO', id: 'AUDIO' },
+                { displayName: 'CABLE', id: 'HDMI1' },
+                { displayName: 'RASPBMC', id: 'HDMI2' },
+                { displayName: 'DVD', id: 'HDMI3' },
+                { displayName: 'HDMI4', id: 'HDMI4' },
+                { displayName: 'AV1', id: 'AV1' },
+                { displayName: 'AV2', id: 'AV2' },
+                { displayName: 'AV3', id: 'AV3' },
+                { displayName: 'AV4', id: 'AV4' },
+                { displayName: 'AV5', id: 'AV5' },
+                { displayName: 'AV6', id: 'AV6' },
+                { displayName: 'V-AUX', id: 'VAUX' },
+                { displayName: 'USB', id: 'USB' }]
+        };
+
+        this.registerEvents();
+
+        // toggle mute every 15 seconds
+        setInterval(function (){
+            this.logInfo("Simulated mute toggle.");
+            this.mute();
+        }.bind(this), 15000);
+
+        // toggle it back 3 seconds later
+        setInterval(function (){
+            this.logInfo("Simulated mute toggle.");
+            this.mute();
+        }.bind(this), 18000);
+
+        // switch input every 25 seconds
+        setInterval(function (){
+            this.logInfo("Simulated switch from " + this.state.input + " to AV5.");
+            this.lastInput = this.state.input;
+            this.setInput("AV5");
+        }.bind(this), 25000);
+
+        // toggle it back 3 seconds later
+        setInterval(function (){
+            this.logInfo("Simulated switch back to " + this.lastInput +".");
+            this.setInput(this.lastInput);
+        }.bind(this), 28000);
     }
-
-
 }

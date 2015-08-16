@@ -5,10 +5,14 @@
                 <td style="width: 20px; padding-right: 10px;">
                     <ti-switch ti-model="component._state.on" ti-change="panel.callDeviceService(component, 'power')"></ti-switch>
                 </td>
-                <td style="text-align: center;">{{component._state.availableInputs}}</td>
-                <td ><select ng-model=“component._state.input”
-                                        ng-options=“yamahaInput.id as yamahaInput.displayName for yamahaInput in component._state.availableInputs”>
-                </select>
+                <!--td style="text-align: center;">{{component._state.availableInputs}}</td-->
+                <td style="text-align: center;">{{component._state.name}}</td>
+                <td style="text-align: center;">Input: {{component._state.input}}
+                    <!--select ng-model=“component._state.input”
+                                        ng-options=“yamahaInput.id as yamahaInput.displayName for yamahaInput in component._state.availableInputs”></select>
+                    <select ng-model=“component._state.input”>
+                        <option ng-repeat=“input in component._state.availableInputs” value=“{{input.id}}”>{{input.label}}</option>
+                    </select-->
                 </td>
             </tr>
             <tr>

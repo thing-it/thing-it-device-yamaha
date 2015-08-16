@@ -12,11 +12,16 @@ yamaha.isSimulated = function () {
     return false;
 };
 yamaha.configuration = {
-    simulated: false,
+    simulated: true,
     host: "10.0.1.10",
     name: "Livingroom V573",
     updateInterval: "1000"
 };
+
+yamaha.isSimulated = function (){
+    return yamaha.configuration.simulated;
+}
+
 yamaha.publishEvent = function(event, data){
     console.log("Event", event);
 };
@@ -32,7 +37,7 @@ yamaha.logInfo = function(){
     }
 }
 yamaha.logDebug = function(){
-    yamaha.logInfo(arguments);
+    //yamaha.logInfo(arguments);
 }
 yamaha.logError = function(){
     yamaha.logInfo(arguments);
@@ -59,19 +64,21 @@ setTimeout(function(){
     yamaha.setVolume(-30);
 }, 14000);
 
+ setTimeout(function(){
+ yamaha.powerOff();
+ }, 6000);
+
+ setTimeout(function(){
+ yamaha.powerOn();
+ }, 12000);
+
+ setTimeout(function(){
+ yamaha.setInput("HDMI1");
+ }, 20000);
+*/
+
 setTimeout(function(){
     yamaha.setInput("AUDIO");
 }, 10000);
 
-setTimeout(function(){
-    yamaha.setInput("HDMI1");
-}, 20000);
 
-setTimeout(function(){
-    yamaha.powerOff();
-}, 6000);
-
-setTimeout(function(){
-    yamaha.powerOn();
-}, 12000);
- */
