@@ -148,7 +148,9 @@ function Yamaha() {
             availableInputs: []
         };
 
-        this.configuration.updateInterval = (1000 > this.configuration.updateInterval ? 1000 : this.configuration.updateInterval);
+        this.configuration.updateInterval = ((!this.state.updateInterval || 1000 > this.configuration.updateInterval)
+            ? 1000
+            : this.configuration.updateInterval);
         this.ignoreUpdate = false;
 
         this.logDebug("Yamaha state: ", this.state);
@@ -226,7 +228,7 @@ function Yamaha() {
     Yamaha.prototype.connect = function () {
         this.readStatus();
 
-        this.yamaha.getSystemConfig().done(function(config){
+        this.yamaha.getSystemConfig().done(function (config) {
             try {
                 this.state.modelName = config.YAMAHA_AV.System[0].Config[0].Model_Name[0];
             } catch (e) {
@@ -234,7 +236,7 @@ function Yamaha() {
             }
 
             this.state.availableInputs = [];
-            this.logInfo("Type: " + (typeof this.state.availableInputs));
+            this.logDebug("Type: " + (typeof this.state.availableInputs));
             var count = 0;
 
             // doesnt return AUDIO in the list, though it is available.
@@ -248,7 +250,7 @@ function Yamaha() {
                     };
                 }
 
-                this.logInfo("Found available inputs", this.state.availableInputs);
+                this.logDebug("Found available inputs", this.state.availableInputs);
                 this.publishStateChange();
             } catch (e) {
                 this.logError("Error reading inputs", e);
@@ -257,10 +259,10 @@ function Yamaha() {
 
         // kills sonos devices on the same network!
         /*
-        this.yamaha.getAvailableInputs().done(function(inputs){
-            this.logInfo(config);
-        }.bind(this));
-        */
+         this.yamaha.getAvailableInputs().done(function(inputs){
+         this.logInfo(config);
+         }.bind(this));
+         */
 
         this.registerEvents();
     }
@@ -285,16 +287,16 @@ function Yamaha() {
     /**
      * Switch On
      */
-    Yamaha.prototype.powerOn = function(){
-        this.logInfo("Switching on");
+    Yamaha.prototype.powerOn = function () {
+        this.logDebug("Switching on");
         this.state.on = true;
         this.ignoreUpdate = true;
-        setInterval(function(){
+        setInterval(function () {
             this.ignoreUpdate = false;
         }.bind(this), 2500);
         this.publishStateChange();
 
-        if (!this.isSimulated()){
+        if (!this.isSimulated()) {
             this.yamaha.powerOn();
         }
     }
@@ -302,16 +304,16 @@ function Yamaha() {
     /**
      * Switch Off
      */
-    Yamaha.prototype.powerOff = function(){
+    Yamaha.prototype.powerOff = function () {
         this.logDebug("Switching off");
         this.state.on = false;
         this.ignoreUpdate = true;
-        setInterval(function(){
+        setInterval(function () {
             this.ignoreUpdate = false;
         }.bind(this), 2500);
         this.publishStateChange();
 
-        if (!this.isSimulated()){
+        if (!this.isSimulated()) {
             this.yamaha.powerOff();
         }
     }
@@ -319,12 +321,12 @@ function Yamaha() {
     /**
      * Power (toggles power)
      */
-    Yamaha.prototype.power = function(){
+    Yamaha.prototype.power = function () {
         /*
-        @TODO figure out UI issue where the toggle switches back and forth
+         @TODO figure out UI issue where the toggle switches back and forth
          */
         this.logDebug("Power On", this.state.on);
-        if (this.state.on){
+        if (this.state.on) {
             this.powerOff();
         }
         else {
@@ -337,13 +339,13 @@ function Yamaha() {
     /**
      * Set input. Only allow inputs that are in the availableInputs state
      */
-    Yamaha.prototype.setInput = function(input){
+    Yamaha.prototype.setInput = function (input) {
         this.logDebug("Checking if  " + input + " is in input Array with length of "
             + this.state.availableInputs.length);
 
-        for	(index = 0; index < this.state.availableInputs.length; index++) {
-            if (input == this.state.availableInputs[index].id){
-                this.logInfo("Setting input to " + this.state.availableInputs[index].displayName
+        for (index = 0; index < this.state.availableInputs.length; index++) {
+            if (input == this.state.availableInputs[index].id) {
+                this.logDebug("Setting input to " + this.state.availableInputs[index].displayName
                     + " (" + this.state.availableInputs[index].id + ").");
                 this.state.input = this.state.availableInputs[index].id;
                 this.readStatus();
@@ -368,10 +370,10 @@ function Yamaha() {
         if (!this.isSimulated()) {
             var yamahamutedState;
 
-            if (this.state.muted){
+            if (this.state.muted) {
                 yamahamutedState = "On";
             }
-            else{
+            else {
                 yamahamutedState = "Off";
             }
 
@@ -387,7 +389,7 @@ function Yamaha() {
      *
      *
      */
-    Yamaha.prototype.isMuted = function(){
+    Yamaha.prototype.isMuted = function () {
         return this.state.muted;
     }
 
@@ -404,8 +406,8 @@ function Yamaha() {
     /**
      *
      */
-    Yamaha.prototype.setVolume = function(volume){
-        if (typeof volume === 'string' || volume instanceof String){
+    Yamaha.prototype.setVolume = function (volume) {
+        if (typeof volume === 'string' || volume instanceof String) {
             this.state.volume = parseInt(volume);
         }
         else
@@ -423,7 +425,7 @@ function Yamaha() {
      *
      *
      */
-    Yamaha.prototype.initiateSimulation = function(){
+    Yamaha.prototype.initiateSimulation = function () {
         this.state = {
             name: this.configuration.name,
             modelName: "RX-V573",
@@ -432,45 +434,45 @@ function Yamaha() {
             volume: -25,
             muted: false,
             availableInputs: [
-                { displayName: 'AUDIO', id: 'AUDIO' },
-                { displayName: 'CABLE', id: 'HDMI1' },
-                { displayName: 'RASPBMC', id: 'HDMI2' },
-                { displayName: 'DVD', id: 'HDMI3' },
-                { displayName: 'HDMI4', id: 'HDMI4' },
-                { displayName: 'AV1', id: 'AV1' },
-                { displayName: 'AV2', id: 'AV2' },
-                { displayName: 'AV3', id: 'AV3' },
-                { displayName: 'AV4', id: 'AV4' },
-                { displayName: 'AV5', id: 'AV5' },
-                { displayName: 'AV6', id: 'AV6' },
-                { displayName: 'V-AUX', id: 'VAUX' },
-                { displayName: 'USB', id: 'USB' }]
+                {displayName: 'AUDIO', id: 'AUDIO'},
+                {displayName: 'CABLE', id: 'HDMI1'},
+                {displayName: 'RASPBMC', id: 'HDMI2'},
+                {displayName: 'DVD', id: 'HDMI3'},
+                {displayName: 'HDMI4', id: 'HDMI4'},
+                {displayName: 'AV1', id: 'AV1'},
+                {displayName: 'AV2', id: 'AV2'},
+                {displayName: 'AV3', id: 'AV3'},
+                {displayName: 'AV4', id: 'AV4'},
+                {displayName: 'AV5', id: 'AV5'},
+                {displayName: 'AV6', id: 'AV6'},
+                {displayName: 'V-AUX', id: 'VAUX'},
+                {displayName: 'USB', id: 'USB'}]
         };
 
         this.registerEvents();
 
         // toggle mute every 15 seconds
-        setInterval(function (){
+        setInterval(function () {
             this.logInfo("Simulated mute toggle.");
             this.mute();
         }.bind(this), 15000);
 
         // toggle it back 3 seconds later
-        setInterval(function (){
+        setInterval(function () {
             this.logInfo("Simulated mute toggle.");
             this.mute();
         }.bind(this), 18000);
 
         // switch input every 25 seconds
-        setInterval(function (){
+        setInterval(function () {
             this.logInfo("Simulated switch from " + this.state.input + " to AV5.");
             this.lastInput = this.state.input;
             this.setInput("AV5");
         }.bind(this), 25000);
 
         // toggle it back 3 seconds later
-        setInterval(function (){
-            this.logInfo("Simulated switch back to " + this.lastInput +".");
+        setInterval(function () {
+            this.logInfo("Simulated switch back to " + this.lastInput + ".");
             this.setInput(this.lastInput);
         }.bind(this), 28000);
     }
