@@ -75,10 +75,17 @@ setTimeout(function(){
  setTimeout(function(){
  yamaha.setInput("HDMI1");
  }, 20000);
-*/
 
 setTimeout(function(){
-    yamaha.setInput("AUDIO");
-}, 10000);
+    yamaha.pureDirect();
+}, 2000);
 
+setTimeout(function(){
+    yamaha.pureDirect();
+}, 8000);
 
+setTimeout((function(){
+    yamaha.stop();
+}), 10000);
+
+ */

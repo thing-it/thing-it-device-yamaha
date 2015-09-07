@@ -30,6 +30,12 @@ module.exports = {
                 id: "string"
             }
         }, {
+            id: "inputName",
+            label: "Input Name",
+            type: {
+                id: "string"
+            }
+        }, {
             id: "volume",
             label: "Volume",
             type: {
@@ -38,6 +44,12 @@ module.exports = {
         }, {
             id: "muted",
             label: "Muted",
+            type: {
+                id: "boolean"
+            }
+        }, {
+            id: "pureDirect",
+            label: "PureDirect",
             type: {
                 id: "boolean"
             }
@@ -112,6 +124,7 @@ module.exports = {
 var q = require('q');
 var YamahaNodeJs;
 
+
 function YamahaDiscovery() {
     /**
      *
@@ -132,12 +145,7 @@ function YamahaDiscovery() {
  *
  */
 function Yamaha() {
-    /**
-     *
-     */
-    Yamaha.prototype.start = function () {
-        var deferred = q.defer();
-
+    Yamaha.prototype.initializeValues = function (){
         this.state = {
             name: null,
             modelName: null,
@@ -145,9 +153,25 @@ function Yamaha() {
             input: null,
             volume: 0,
             muted: false,
+            pureDirect: false,
             availableInputs: []
         };
 
+        this.started = true;
+        this.intervals = [];
+        this.intervalCount = 0;
+        this.simulationIntervals = [];
+        this.simulationIntervalCount = 0;
+        this.state.availableInputs = [];
+        this.yamaha = null;
+    }
+
+    /**
+     *
+     */
+    Yamaha.prototype.start = function () {
+        var deferred = q.defer();
+        this.initializeValues();
         this.configuration.updateInterval = ((!this.state.updateInterval || 1000 > this.configuration.updateInterval)
             ? 1000
             : this.configuration.updateInterval);
@@ -158,7 +182,6 @@ function Yamaha() {
 
         if (!this.isSimulated()) {
             this.logInfo("Starting up Yamaha.");
-            this.started = true;
 
             if (!YamahaNodeJs) {
                 YamahaNodeJs = require("yamaha-nodejs");
@@ -174,6 +197,20 @@ function Yamaha() {
 
         return deferred.promise;
     };
+
+    Yamaha.prototype.stop = function (){
+        this.started = false;
+
+        for (var index = 0; index < this.intervals.length; ++index) {
+            clearInterval(this.intervals[index]);
+        }
+
+        for (var index = 0; index < this.simulationIntervals.length; ++index) {
+            clearInterval(this.simulationIntervals[index]);
+        }
+
+        this.initializeValues();
+    }
 
     /**
      *
@@ -195,22 +232,28 @@ function Yamaha() {
     Yamaha.prototype.readStatus = function () {
         this.logDebug("Reading status, ignore flag set to ", this.ignoreUpdate);
 
-        if (!this.isSimulated()) {
-            if (!this.ignoreUpdate) {
-                this.yamaha.getBasicInfo().done(function (basicInfo) {
-                    this.state.volume = Math.round(basicInfo.getVolume() / 10);
-                    this.state.muted = Boolean(basicInfo.isMuted());
-                    this.state.on = Boolean(basicInfo.isOn());
-                    this.state.input = basicInfo.getCurrentInput();
+        if (this.started) {
+            if (!this.isSimulated()) {
+                if (!this.ignoreUpdate) {
+                    this.yamaha.getBasicInfo().done(function (basicInfo) {
+                        this.state.volume = Math.round(basicInfo.getVolume() / 10);
+                        this.state.muted = Boolean(basicInfo.isMuted());
+                        this.state.on = Boolean(basicInfo.isOn());
+                        this.state.input = basicInfo.getCurrentInput();
 
-                    this.publishStateChange();
-                }.bind(this));
+                        // following code possibly specific to RX-V573
+                        var rawBasicStatus = basicInfo.YAMAHA_AV.Main_Zone[0].Basic_Status[0];
+                        this.state.inputName = rawBasicStatus.Input[0].Input_Sel_Item_Info[0].Title[0];
+                        this.state.pureDirect = "On" === rawBasicStatus.Sound_Video[0].Direct[0].Mode[0];
+                        this.publishStateChange();
+                    }.bind(this));
+                }
             }
-        }
-        else {
-            this.logDebug("Current state - on:" + this.state.on + ", input: " + this.state.input
-                + ", volume: " + this.state.volume + ", muted: " + this.state.muted);
-            this.publishStateChange();
+            else {
+                this.logDebug("Current state - on:" + this.state.on + ", input: " + this.state.input
+                    + ", volume: " + this.state.volume + ", muted: " + this.state.muted);
+                this.publishStateChange();
+            }
         }
     }
 
@@ -219,7 +262,7 @@ function Yamaha() {
      */
     Yamaha.prototype.registerEvents = function () {
         this.logDebug("Initiating updates with interval", this.configuration.updateInterval);
-        setInterval(Yamaha.prototype.readStatus.bind(this), this.configuration.updateInterval);
+        this.intervals[this.intervalCount++] = setInterval(Yamaha.prototype.readStatus.bind(this), this.configuration.updateInterval);
     }
 
     /**
@@ -230,21 +273,24 @@ function Yamaha() {
 
         this.yamaha.getSystemConfig().done(function (config) {
             try {
+                // Code possibly specific to RX-V573
                 this.state.modelName = config.YAMAHA_AV.System[0].Config[0].Model_Name[0];
             } catch (e) {
                 this.logError("Error reading model name", e);
             }
 
-            this.state.availableInputs = [];
             this.logDebug("Type: " + (typeof this.state.availableInputs));
             var count = 0;
 
             // doesnt return AUDIO in the list, though it is available.
+            // Code possibly specific to RX-V573
             this.state.availableInputs[count++] = {displayName: "AUDIO", id: "AUDIO"};
 
             try {
+                // Code possibly specific to RX-V573
                 for (var n in config.YAMAHA_AV.System[0].Config[0].Name[0].Input[0]) {
                     this.state.availableInputs[count++] = {
+                        // Code possibly specific to RX-V573
                         displayName: config.YAMAHA_AV.System[0].Config[0].Name[0].Input[0][n][0].trim(),
                         id: n.replace("_", "")
                     };
@@ -257,7 +303,7 @@ function Yamaha() {
             }
         }.bind(this));
 
-        // kills sonos devices on the same network!
+        // The following code kills Sonos devices on the same network and is therefore not used.
         /*
          this.yamaha.getAvailableInputs().done(function(inputs){
          this.logInfo(config);
@@ -308,7 +354,7 @@ function Yamaha() {
         this.logDebug("Switching off");
         this.state.on = false;
         this.ignoreUpdate = true;
-        setInterval(function () {
+        setTimeout(function () {
             this.ignoreUpdate = false;
         }.bind(this), 2500);
         this.publishStateChange();
@@ -368,6 +414,78 @@ function Yamaha() {
         this.state.muted = !this.state.muted;
 
         if (!this.isSimulated()) {
+            if (this.state.muted) {
+                this.muteOn();
+            }
+            else {
+                this.muteOff();
+            }
+
+        }
+
+        this.readStatus();
+    };
+
+    Yamaha.prototype.muteOn = function() {
+        this.setMute("On");
+    }
+
+    Yamaha.prototype.muteOff = function () {
+        this.setMute("Off");
+    }
+
+    Yamaha.prototype.setMute = function (yamahamutedState){
+        // Code likely specific to RX-V573
+        var xml = '<YAMAHA_AV cmd="PUT"><Main_Zone><Volume><Mute>' + yamahamutedState
+            + '</Mute></Volume></Main_Zone></YAMAHA_AV>'
+        this.yamaha.SendXMLToReceiver(xml);
+    }
+
+    /**
+     *
+     *
+     */
+    Yamaha.prototype.pureDirect = function () {
+        this.logDebug("Yamaha pureDirect called");
+        this.state.pureDirect = !this.state.pureDirect;
+
+        if (!this.isSimulated()) {
+            if (this.state.pureDirect) {
+                this.pureDirectOn();
+            }
+            else {
+                this.pureDirectOff();
+            }
+
+        }
+
+        this.readStatus();
+    };
+
+    Yamaha.prototype.pureDirectOn = function() {
+        this.setPureDirect("On");
+    }
+
+    Yamaha.prototype.pureDirectOff = function () {
+        this.setPureDirect("Off");
+    }
+
+    Yamaha.prototype.setPureDirect = function (yamahaPureDirectState){
+        // Code likely specific to RX-V573
+        var xml = '<YAMAHA_AV cmd="PUT"><Main_Zone><Sound_Video><Direct><Mode>' + yamahaPureDirectState
+            + '</Mode></Direct></Sound_Video></Main_Zone></YAMAHA_AV>';
+        this.yamaha.SendXMLToReceiver(xml);
+    }
+
+    /**
+     *
+     *
+     */
+    Yamaha.prototype.mute = function () {
+        this.logDebug("Yamaha mute called");
+        this.state.muted = !this.state.muted;
+
+        if (!this.isSimulated()) {
             var yamahamutedState;
 
             if (this.state.muted) {
@@ -384,6 +502,8 @@ function Yamaha() {
 
         this.readStatus();
     };
+
+
 
     /**
      *
@@ -452,26 +572,26 @@ function Yamaha() {
         this.registerEvents();
 
         // toggle mute every 15 seconds
-        setInterval(function () {
+        this.simulationIntervals[this.simulationIntervalCount++] = setInterval(function () {
             this.logInfo("Simulated mute toggle.");
             this.mute();
         }.bind(this), 15000);
 
         // toggle it back 3 seconds later
-        setInterval(function () {
+        this.simulationIntervals[this.simulationIntervalCount++] = setInterval(function () {
             this.logInfo("Simulated mute toggle.");
             this.mute();
         }.bind(this), 18000);
 
         // switch input every 25 seconds
-        setInterval(function () {
+        this.simulationIntervals[this.simulationIntervalCount++] = setInterval(function () {
             this.logInfo("Simulated switch from " + this.state.input + " to AV5.");
             this.lastInput = this.state.input;
             this.setInput("AV5");
         }.bind(this), 25000);
 
         // toggle it back 3 seconds later
-        setInterval(function () {
+        this.simulationIntervals[this.simulationIntervalCount++] = setInterval(function () {
             this.logInfo("Simulated switch back to " + this.lastInput + ".");
             this.setInput(this.lastInput);
         }.bind(this), 28000);
