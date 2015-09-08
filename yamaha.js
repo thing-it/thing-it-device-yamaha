@@ -200,6 +200,7 @@ function Yamaha() {
 
     Yamaha.prototype.stop = function (){
         this.started = false;
+        this.logInfo("Stopping Yamaha AV Receiver " + this.state.name + " (" + this.configuration.host + ").");
 
         for (var index = 0; index < this.intervals.length; ++index) {
             clearInterval(this.intervals[index]);
@@ -216,7 +217,7 @@ function Yamaha() {
      *
      */
     Yamaha.prototype.scan = function () {
-        this.logInfo("Scanning for Yamaha Host " + this.configuration.host + " started.");
+        this.logInfo("Scanning for Yamaha AV Receiver at host " + this.configuration.host + " started.");
         var deferred = q.defer();
         this.yamaha = new YamahaNodeJs(this.configuration.host);
         this.logInfo("Connected to host " + this.configuration.name + " (" + this.configuration.host + ").");
@@ -230,6 +231,7 @@ function Yamaha() {
      *
      */
     Yamaha.prototype.readStatus = function () {
+        var deferred = q.defer();
         this.logDebug("Reading status, ignore flag set to ", this.ignoreUpdate);
 
         if (this.started) {
@@ -242,9 +244,16 @@ function Yamaha() {
                         this.state.input = basicInfo.getCurrentInput();
 
                         // following code possibly specific to RX-V573
-                        var rawBasicStatus = basicInfo.YAMAHA_AV.Main_Zone[0].Basic_Status[0];
-                        this.state.inputName = rawBasicStatus.Input[0].Input_Sel_Item_Info[0].Title[0];
-                        this.state.pureDirect = "On" === rawBasicStatus.Sound_Video[0].Direct[0].Mode[0];
+                        try {
+                            var rawBasicStatus = basicInfo.YAMAHA_AV.Main_Zone[0].Basic_Status[0];
+
+                                this.state.inputName = rawBasicStatus.Input[0].Input_Sel_Item_Info[0].Title[0];
+                                this.state.pureDirect = "On" === rawBasicStatus.Sound_Video[0].Direct[0].Mode[0];
+                        } catch (e) {
+                            this.logError("Error during status read: " + e.message);
+                            this.logError(e.stack);
+                        }
+
                         this.publishStateChange();
                     }.bind(this));
                 }
@@ -255,23 +264,30 @@ function Yamaha() {
                 this.publishStateChange();
             }
         }
+
+        deferred.resolve();
+        return deferred.promise;
     }
 
     /**
      *
      */
     Yamaha.prototype.registerEvents = function () {
+        var deferred = q.defer();
         this.logDebug("Initiating updates with interval", this.configuration.updateInterval);
         this.intervals[this.intervalCount++] = setInterval(Yamaha.prototype.readStatus.bind(this), this.configuration.updateInterval);
+        deferred.resolve();
+        return deferred.promise;
     }
 
     /**
      *
      */
     Yamaha.prototype.connect = function () {
-        this.readStatus();
+        var deferred = q.defer();
 
         this.yamaha.getSystemConfig().done(function (config) {
+            var deferred = q.defer();
             try {
                 // Code possibly specific to RX-V573
                 this.state.modelName = config.YAMAHA_AV.System[0].Config[0].Model_Name[0];
@@ -279,7 +295,6 @@ function Yamaha() {
                 this.logError("Error reading model name", e);
             }
 
-            this.logDebug("Type: " + (typeof this.state.availableInputs));
             var count = 0;
 
             // doesnt return AUDIO in the list, though it is available.
@@ -297,10 +312,12 @@ function Yamaha() {
                 }
 
                 this.logDebug("Found available inputs", this.state.availableInputs);
-                this.publishStateChange();
             } catch (e) {
                 this.logError("Error reading inputs", e);
             }
+
+            deferred.resolve();
+            return deferred.promise;
         }.bind(this));
 
         // The following code kills Sonos devices on the same network and is therefore not used.
@@ -310,7 +327,10 @@ function Yamaha() {
          }.bind(this));
          */
 
+        this.readStatus();
         this.registerEvents();
+        deferred.resolve();
+        return deferred.promise;
     }
 
     /**
@@ -334,6 +354,7 @@ function Yamaha() {
      * Switch On
      */
     Yamaha.prototype.powerOn = function () {
+        var deferred = q.defer();
         this.logDebug("Switching on");
         this.state.on = true;
         this.ignoreUpdate = true;
@@ -345,12 +366,16 @@ function Yamaha() {
         if (!this.isSimulated()) {
             this.yamaha.powerOn();
         }
+
+        deferred.resolve();
+        return deferred.promise;
     }
 
     /**
      * Switch Off
      */
     Yamaha.prototype.powerOff = function () {
+        var deferred = q.defer();
         this.logDebug("Switching off");
         this.state.on = false;
         this.ignoreUpdate = true;
@@ -362,12 +387,16 @@ function Yamaha() {
         if (!this.isSimulated()) {
             this.yamaha.powerOff();
         }
+
+        deferred.resolve();
+        return deferred.promise;
     }
 
     /**
      * Power (toggles power)
      */
     Yamaha.prototype.power = function () {
+        var deferred = q.defer();
         /*
          @TODO figure out UI issue where the toggle switches back and forth
          */
@@ -380,12 +409,16 @@ function Yamaha() {
         }
 
         this.publishStateChange();
+
+        deferred.resolve();
+        return deferred.promise;
     }
 
     /**
      * Set input. Only allow inputs that are in the availableInputs state
      */
     Yamaha.prototype.setInput = function (input) {
+        var deferred = q.defer();
         this.logDebug("Checking if  " + input + " is in input Array with length of "
             + this.state.availableInputs.length);
 
@@ -394,7 +427,7 @@ function Yamaha() {
                 this.logDebug("Setting input to " + this.state.availableInputs[index].displayName
                     + " (" + this.state.availableInputs[index].id + ").");
                 this.state.input = this.state.availableInputs[index].id;
-                this.readStatus();
+                this.state.inputName = this.state.availableInputs[index].displayName;
 
                 if (!this.isSimulated()) {
                     this.yamaha.setMainInputTo(this.state.availableInputs[index].id);
@@ -403,6 +436,10 @@ function Yamaha() {
                 break;
             }
         }
+
+        this.publishStateChange();
+        deferred.resolve();
+        return deferred.promise;
     }
 
     /**
@@ -410,6 +447,7 @@ function Yamaha() {
      *
      */
     Yamaha.prototype.mute = function () {
+        var deferred = q.defer();
         this.logDebug("Yamaha mute called");
         this.state.muted = !this.state.muted;
 
@@ -423,22 +461,54 @@ function Yamaha() {
 
         }
 
-        this.readStatus();
+        this.publishStateChange();
+        deferred.resolve();
+        return deferred.promise;
     };
 
     Yamaha.prototype.muteOn = function() {
-        this.setMute("On");
+        var deferred = q.defer();
+        this.setMute(true);
+        deferred.resolve();
+        return deferred.promise;
     }
 
     Yamaha.prototype.muteOff = function () {
-        this.setMute("Off");
+        var deferred = q.defer();
+        this.setMute(false);
+        deferred.resolve();
+        return deferred.promise;
     }
 
-    Yamaha.prototype.setMute = function (yamahamutedState){
+    Yamaha.prototype.setMute = function (muted){
+        var deferred = q.defer();
+        var modeString;
+
+        if (muted){
+            modeString = "On";
+            this.state.muted = true;
+        }
+        else{
+            modeString = "Off";
+            this.state.muted = false;
+        }
+
         // Code likely specific to RX-V573
-        var xml = '<YAMAHA_AV cmd="PUT"><Main_Zone><Volume><Mute>' + yamahamutedState
+        var xml = '<YAMAHA_AV cmd="PUT"><Main_Zone><Volume><Mute>' + modeString
             + '</Mute></Volume></Main_Zone></YAMAHA_AV>'
         this.yamaha.SendXMLToReceiver(xml);
+
+        this.publishStateChange();
+        deferred.resolve();
+        return deferred.promise;
+    }
+
+    /**
+     *
+     *
+     */
+    Yamaha.prototype.isMuted = function () {
+        return this.state.muted;
     }
 
     /**
@@ -446,6 +516,7 @@ function Yamaha() {
      *
      */
     Yamaha.prototype.pureDirect = function () {
+        var deferred = q.defer();
         this.logDebug("Yamaha pureDirect called");
         this.state.pureDirect = !this.state.pureDirect;
 
@@ -459,58 +530,52 @@ function Yamaha() {
 
         }
 
-        this.readStatus();
+        this.publishStateChange();
+        deferred.resolve();
+        return deferred.promise;
     };
 
     Yamaha.prototype.pureDirectOn = function() {
-        this.setPureDirect("On");
+        var deferred = q.defer();
+        this.setPureDirect(true);
+        deferred.resolve();
+        return deferred.promise;
     }
 
     Yamaha.prototype.pureDirectOff = function () {
-        this.setPureDirect("Off");
+        var deferred = q.defer();
+        this.setPureDirect(false);
+        deferred.resolve();
+        return deferred.promise;
     }
 
-    Yamaha.prototype.setPureDirect = function (yamahaPureDirectState){
+    Yamaha.prototype.setPureDirect = function (pureDirect){
+        var deferred = q.defer();
+        var modeString;
+
+        if (pureDirect){
+            modeString = "On";
+            this.state.pureDirect = true;
+        }
+        else{
+            modeString = "Off";
+            this.state.pureDirect = false;
+        }
         // Code likely specific to RX-V573
-        var xml = '<YAMAHA_AV cmd="PUT"><Main_Zone><Sound_Video><Direct><Mode>' + yamahaPureDirectState
+        var xml = '<YAMAHA_AV cmd="PUT"><Main_Zone><Sound_Video><Direct><Mode>' + modeString
             + '</Mode></Direct></Sound_Video></Main_Zone></YAMAHA_AV>';
         this.yamaha.SendXMLToReceiver(xml);
+        this.publishStateChange();
+        deferred.resolve();
+        return deferred.promise;
     }
 
     /**
      *
      *
      */
-    Yamaha.prototype.mute = function () {
-        this.logDebug("Yamaha mute called");
-        this.state.muted = !this.state.muted;
-
-        if (!this.isSimulated()) {
-            var yamahamutedState;
-
-            if (this.state.muted) {
-                yamahamutedState = "On";
-            }
-            else {
-                yamahamutedState = "Off";
-            }
-
-            var xml = '<YAMAHA_AV cmd="PUT"><Main_Zone><Volume><Mute>' + yamahamutedState
-                + '</Mute></Volume></Main_Zone></YAMAHA_AV>'
-            this.yamaha.SendXMLToReceiver(xml);
-        }
-
-        this.readStatus();
-    };
-
-
-
-    /**
-     *
-     *
-     */
-    Yamaha.prototype.isMuted = function () {
-        return this.state.muted;
+    Yamaha.prototype.isPureDirect = function () {
+        return this.state.pureDirect;
     }
 
     /**
@@ -518,8 +583,11 @@ function Yamaha() {
      *
      */
     Yamaha.prototype.changeVolume = function (parameters) {
+        var deferred = q.defer();
         this.logDebug("ChangeVolume called: ", parameters);
         this.setVolume(parameters.level);
+        deferred.resolve();
+        return deferred.promise;
     };
 
 
@@ -527,6 +595,7 @@ function Yamaha() {
      *
      */
     Yamaha.prototype.setVolume = function (volume) {
+        var deferred = q.defer();
         if (typeof volume === 'string' || volume instanceof String) {
             this.state.volume = parseInt(volume);
         }
@@ -539,6 +608,8 @@ function Yamaha() {
 
         this.logDebug("Volume", this.state.volume, (typeof this.state.volume), volume);
         this.publishStateChange();
+        deferred.resolve();
+        return deferred.promise;
     }
 
     /**

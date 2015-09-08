@@ -12,7 +12,7 @@ yamaha.isSimulated = function () {
     return false;
 };
 yamaha.configuration = {
-    simulated: true,
+    simulated: false,
     host: "10.0.1.10",
     name: "Livingroom V573",
     updateInterval: "1000"
@@ -26,7 +26,8 @@ yamaha.publishEvent = function(event, data){
     console.log("Event", event);
 };
 yamaha.publishStateChange = function(){
-    console.log("State Change", this.getState());
+    //console.log("State Change", this.getState());
+    console.log("State Change");
 };
 yamaha.logInfo = function(){
     if (arguments.length == 1 ) {
@@ -47,30 +48,29 @@ console.log("About to start");
 yamaha.start();
 
 
-/* Tested successfully
+setTimeout(function(){
+    yamaha.powerOff();
+}, 5000);
+
+setTimeout(function(){
+    yamaha.powerOn();
+}, 8000);
+
 setTimeout(function(){
     yamaha.mute();
 }, 10000);
 
 setTimeout(function(){
     yamaha.mute();
-}, 14000);
+}, 13000);
 
 setTimeout(function(){
     yamaha.setVolume(-31);
-}, 10000);
+}, 15000);
 
 setTimeout(function(){
-    yamaha.setVolume(-30);
-}, 14000);
-
- setTimeout(function(){
- yamaha.powerOff();
- }, 6000);
-
- setTimeout(function(){
- yamaha.powerOn();
- }, 12000);
+    yamaha.setVolume(-38);
+}, 18000);
 
  setTimeout(function(){
  yamaha.setInput("HDMI1");
@@ -78,14 +78,12 @@ setTimeout(function(){
 
 setTimeout(function(){
     yamaha.pureDirect();
-}, 2000);
+}, 23000);
 
 setTimeout(function(){
     yamaha.pureDirect();
-}, 8000);
+}, 26000);
 
 setTimeout((function(){
     yamaha.stop();
-}), 10000);
-
- */
+}), 30000);
