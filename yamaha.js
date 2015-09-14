@@ -48,8 +48,8 @@ module.exports = {
                 id: "boolean"
             }
         }, {
-            id: "pureDirect",
-            label: "PureDirect",
+            id: "direct",
+            label: "Direct",
             type: {
                 id: "boolean"
             }
@@ -74,6 +74,12 @@ module.exports = {
         }, {
             id: "mute",
             label: "Mute"
+        }, {
+            id: "mute",
+            label: "Mute"
+        }, {
+            id: "direct",
+            label: "Direct"
         }, {
             id: "setInput",
             label: "Set Input"
@@ -153,7 +159,7 @@ function Yamaha() {
             input: null,
             volume: 0,
             muted: false,
-            pureDirect: false,
+            direct: false,
             availableInputs: []
         };
 
@@ -248,7 +254,7 @@ function Yamaha() {
                             var rawBasicStatus = basicInfo.YAMAHA_AV.Main_Zone[0].Basic_Status[0];
 
                                 this.state.inputName = rawBasicStatus.Input[0].Input_Sel_Item_Info[0].Title[0];
-                                this.state.pureDirect = "On" === rawBasicStatus.Sound_Video[0].Direct[0].Mode[0];
+                                this.state.direct = "On" === rawBasicStatus.Sound_Video[0].Direct[0].Mode[0];
                         } catch (e) {
                             this.logError("Error during status read: " + e.message);
                             this.logError(e.stack);
@@ -515,17 +521,17 @@ function Yamaha() {
      *
      *
      */
-    Yamaha.prototype.pureDirect = function () {
+    Yamaha.prototype.direct = function () {
         var deferred = q.defer();
-        this.logDebug("Yamaha pureDirect called");
-        this.state.pureDirect = !this.state.pureDirect;
+        this.logDebug("Yamaha direct called");
+        this.state.direct = !this.state.direct;
 
         if (!this.isSimulated()) {
-            if (this.state.pureDirect) {
-                this.pureDirectOn();
+            if (this.state.direct) {
+                this.directOn();
             }
             else {
-                this.pureDirectOff();
+                this.directOff();
             }
 
         }
@@ -535,31 +541,31 @@ function Yamaha() {
         return deferred.promise;
     };
 
-    Yamaha.prototype.pureDirectOn = function() {
+    Yamaha.prototype.directOn = function() {
         var deferred = q.defer();
-        this.setPureDirect(true);
+        this.setDirect(true);
         deferred.resolve();
         return deferred.promise;
     }
 
-    Yamaha.prototype.pureDirectOff = function () {
+    Yamaha.prototype.directOff = function () {
         var deferred = q.defer();
-        this.setPureDirect(false);
+        this.setDirect(false);
         deferred.resolve();
         return deferred.promise;
     }
 
-    Yamaha.prototype.setPureDirect = function (pureDirect){
+    Yamaha.prototype.setDirect = function (direct){
         var deferred = q.defer();
         var modeString;
 
-        if (pureDirect){
+        if (direct){
             modeString = "On";
-            this.state.pureDirect = true;
+            this.state.direct = true;
         }
         else{
             modeString = "Off";
-            this.state.pureDirect = false;
+            this.state.direct = false;
         }
         // Code likely specific to RX-V573
         var xml = '<YAMAHA_AV cmd="PUT"><Main_Zone><Sound_Video><Direct><Mode>' + modeString
@@ -574,8 +580,8 @@ function Yamaha() {
      *
      *
      */
-    Yamaha.prototype.isPureDirect = function () {
-        return this.state.pureDirect;
+    Yamaha.prototype.isDirect = function () {
+        return this.state.direct;
     }
 
     /**
