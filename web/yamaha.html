@@ -1,38 +1,36 @@
-<div style="width: 100%; display: table;">
-    <div style="display: table-cell; text-align: center;">
-        <table style="width: 100%">
-            <tr>
-                <td style="width: 20px; padding-right: 10px;">
-                    <ti-switch ti-model="component._state.on" ti-change="panel.callDeviceService(component, 'power')"></ti-switch>
-                </td>
-                <!--td style="text-align: center;">{{component._state.availableInputs}}</td-->
-                <td style="text-align: center;">{{component._state.name}}</td>
-                <td style="text-align: center;">Input: {{component._state.input}}
-                    <!--select ng-model=“component._state.input”
-                                        ng-options=“yamahaInput.id as yamahaInput.displayName for yamahaInput in component._state.availableInputs”></select>
-                    <select ng-model=“component._state.input”>
-                        <option ng-repeat=“input in component._state.availableInputs” value=“{{input.id}}”>{{input.label}}</option>
-                    </select-->
-                </td>
-            </tr>
-            <tr>
-                <td colspan="3">
-                    <table style="width: 100%">
-                        <tr>
-                            <td style="width: 85%">
-                                <input ti-slider=""
-                                       ti-model="component._state.volume" ti-min="-80" ti-max="0"
-                                       ti-change="panel.callDeviceService(component, 'changeVolume', {level: component._state.volume} )">
+<div style="display: block;">
+    <div style="width: 100%; padding: 1em;">
+        <div class="ellipsisTextOverflow" style="margin-top: 1em; text-align: left;">
+            <div class="ellipsisTextOverflow">
+                <div class="upperCase titleFont ternaryColor">Host</div>
+                <div>{{component._state.name}}</div>
+            </div>
+            <div class="ellipsisTextOverflow">
+                <div class="upperCase titleFont ternaryColor">Input</div>
+                <div>{{component._state.input}}</div>
+            </div>
+        </div>
+    </div>
+    <div class="horizontalLine"></div>
+    <div style="text-align: left; vertical-align: middle; float: left; padding: 1em;">
+        <ti-switch ti-model="component._state.on"
+                   ti-change="panel.callDeviceService(component, 'power')"></ti-switch>
+    </div>
+    <div class="horizontalLine"></div>
+    <div style="clear: both; padding-top: 1.5em;">
+        <table style="width: 100%;">
+            <tr style="vertical-align: middle;">
+                <td style="width: 99%">
+                    <input ti-slider=""
+                           ti-model="component._state.volume" ti-min="-80" ti-max="0"
+                           ti-change="panel.callDeviceService(component, 'changeVolume', {level: component._state.volume} )">
 
-                            </td>
-                            <td style="width: 15%; text-align: center;"><a ng-show="component._state.muted"
-                                                                           ng-click="panel.callDeviceService(component, 'mute')"><i
-                                    class="fa fa-volume-off"></i></a>
-                                <a ng-hide="component._state.muted" ng-click="panel.callDeviceService(component, 'mute')"><i
-                                        class="fa fa-volume-up"></i></a>
-                            </td>
-                        </tr>
-                    </table>
+                </td>
+                <td style="width: 2em; text-align: center;"><a ng-show="component._state.muted"
+                                                               ng-click="panel.callDeviceService(component, 'mute')"><i
+                        class="fa fa-volume-off"></i></a>
+                    <a ng-hide="component._state.muted" ng-click="panel.callDeviceService(component, 'mute')"><i
+                            class="fa fa-volume-up"></i></a>
                 </td>
             </tr>
         </table>
