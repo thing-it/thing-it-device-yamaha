@@ -127,9 +127,8 @@ module.exports = {
     }
 };
 
-var q = require('q');
 var YamahaNodeJs;
-
+var q = require('q');
 
 function YamahaDiscovery() {
     /**
@@ -195,13 +194,12 @@ function Yamaha() {
             }
 
             this.scan();
-            deferred.resolve();
         } else {
             this.logInfo("Starting up simulated Yamaha.");
-            deferred.resolve();
             this.initiateSimulation();
         }
 
+        deferred.resolve();
         return deferred.promise;
     };
 
@@ -225,7 +223,6 @@ function Yamaha() {
      */
     Yamaha.prototype.scan = function () {
         this.logInfo("Scanning for Yamaha AV Receiver at host " + this.configuration.host + " started.");
-        var deferred = q.defer();
 
         try {
             this.yamaha = new YamahaNodeJs(this.configuration.host);
@@ -235,16 +232,12 @@ function Yamaha() {
         } catch (e) {
             this.logError(e);
         }
-
-        deferred.resolve();
-        return deferred.promise;
     };
 
     /**
      *
      */
     Yamaha.prototype.readStatus = function () {
-        var deferred = q.defer();
         this.logDebug("Reading status, ignore flag set to ", this.ignoreUpdate);
 
         if (this.started) {
@@ -287,35 +280,25 @@ function Yamaha() {
                     + ", volume: " + this.state.volume + ", muted: " + this.state.muted);
             }
         }
-
-        deferred.resolve();
-        return deferred.promise;
     }
 
     /**
      *
      */
     Yamaha.prototype.registerEvents = function () {
-        var deferred = q.defer();
         this.logDebug("Initiating updates with interval", this.state.updateInterval);
 
         this.intervals.push(setInterval(function () {
             this.logDebug("Requesting periodic status update.");
             this.readStatus();
         }.bind(this), this.state.updateInterval));
-
-        deferred.resolve();
-        return deferred.promise;
     }
 
     /**
      *
      */
     Yamaha.prototype.connect = function () {
-        var deferred = q.defer();
-
         this.yamaha.getSystemConfig().done(function (config) {
-            var deferred = q.defer();
             try {
                 // Code possibly specific to RX-V573
                 this.state.modelName = config.YAMAHA_AV.System[0].Config[0].Model_Name[0];
@@ -344,10 +327,8 @@ function Yamaha() {
                 this.logError("Error reading inputs", e);
             }
 
-            this.readStatus().done(this.registerEvents());
-
-            deferred.resolve();
-            return deferred.promise;
+            this.readStatus();
+            this.registerEvents();
         }.bind(this));
 
         // The following code kills Sonos devices on the same network and is therefore not used.
@@ -356,9 +337,6 @@ function Yamaha() {
          this.logInfo(config);
          }.bind(this));
          */
-
-        deferred.resolve();
-        return deferred.promise;
     }
 
     /**
@@ -380,7 +358,6 @@ function Yamaha() {
      * Switch On
      */
     Yamaha.prototype.powerOn = function () {
-        var deferred = q.defer();
         this.logDebug("Switching on");
         this.ignoreUpdate = true;
         this.state.on = true;
@@ -395,16 +372,12 @@ function Yamaha() {
                 this.logError(e);
             }
         }
-
-        deferred.resolve();
-        return deferred.promise;
     }
 
     /**
      * Switch Off
      */
     Yamaha.prototype.powerOff = function () {
-        var deferred = q.defer();
         this.logDebug("Switching off");
         this.ignoreUpdate = true;
         this.state.on = false;
@@ -419,16 +392,12 @@ function Yamaha() {
                 this.logError(e);
             }
         }
-
-        deferred.resolve();
-        return deferred.promise;
     }
 
     /**
      * Power (toggles power)
      */
     Yamaha.prototype.power = function () {
-        var deferred = q.defer();
         this.logDebug("Power on: ", this.state.on);
 
         if (this.state.on) {
@@ -437,9 +406,6 @@ function Yamaha() {
         else {
             this.powerOn();
         }
-
-        deferred.resolve();
-        return deferred.promise;
     }
 
     Yamaha.prototype.changeInput = function (parameters) {
@@ -451,7 +417,6 @@ function Yamaha() {
      * Set input. Only allow inputs that are in the availableInputs state
      */
     Yamaha.prototype.setInput = function (input) {
-        var deferred = q.defer();
         this.logDebug("Checking if  " + input + " is in input Array with length of "
             + this.state.availableInputs.length);
 
@@ -475,9 +440,6 @@ function Yamaha() {
                 break;
             }
         }
-
-        deferred.resolve();
-        return deferred.promise;
     }
 
     /**
@@ -485,7 +447,6 @@ function Yamaha() {
      *
      */
     Yamaha.prototype.mute = function () {
-        var deferred = q.defer();
         this.logDebug("Yamaha mute called");
 
         if (this.state.muted) {
@@ -493,27 +454,17 @@ function Yamaha() {
         } else {
             this.muteOn();
         }
-
-        deferred.resolve();
-        return deferred.promise;
     };
 
     Yamaha.prototype.muteOn = function () {
-        var deferred = q.defer();
         this.setMute(true);
-        deferred.resolve();
-        return deferred.promise;
     }
 
     Yamaha.prototype.muteOff = function () {
-        var deferred = q.defer();
         this.setMute(false);
-        deferred.resolve();
-        return deferred.promise;
     }
 
     Yamaha.prototype.setMute = function (muted) {
-        var deferred = q.defer();
         var modeString;
         this.ignoreUpdate = true;
         this.state.muted = muted;
@@ -537,9 +488,6 @@ function Yamaha() {
         } catch (e) {
             this.logError(e);
         }
-
-        deferred.resolve();
-        return deferred.promise;
     }
 
     /**
@@ -555,34 +503,23 @@ function Yamaha() {
      *
      */
     Yamaha.prototype.direct = function () {
-        var deferred = q.defer();
         this.logDebug("Yamaha direct called");
         var directTarget = !this.state.direct;
 
         if (!this.isSimulated()) {
             this.setDirect(directTarget);
         }
-
-        deferred.resolve();
-        return deferred.promise;
     };
 
     Yamaha.prototype.directOn = function () {
-        var deferred = q.defer();
         this.setDirect(true);
-        deferred.resolve();
-        return deferred.promise;
     }
 
     Yamaha.prototype.directOff = function () {
-        var deferred = q.defer();
         this.setDirect(false);
-        deferred.resolve();
-        return deferred.promise;
     }
 
     Yamaha.prototype.setDirect = function (direct) {
-        var deferred = q.defer();
         var modeString;
         this.ignoreUpdate = true;
         this.state.direct = direct;
@@ -606,9 +543,6 @@ function Yamaha() {
         } catch (e) {
             this.logError(e);
         }
-
-        deferred.resolve();
-        return deferred.promise;
     }
 
     /**
@@ -624,11 +558,8 @@ function Yamaha() {
      *
      */
     Yamaha.prototype.changeVolume = function (parameters) {
-        var deferred = q.defer();
         this.logDebug("ChangeVolume called: ", parameters);
         this.setVolume(parameters.level);
-        deferred.resolve();
-        return deferred.promise;
     };
 
 
@@ -636,7 +567,6 @@ function Yamaha() {
      *
      */
     Yamaha.prototype.setVolume = function (volume) {
-        var deferred = q.defer();
         var volumeInteger;
 
         if (typeof volume === 'string' || volume instanceof String) {
@@ -659,9 +589,6 @@ function Yamaha() {
                 this.logError(e);
             }
         }
-
-        deferred.resolve();
-        return deferred.promise;
     }
 
     /**
