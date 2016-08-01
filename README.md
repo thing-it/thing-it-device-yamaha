@@ -34,7 +34,7 @@ Installation:
 
 The UI display's the connected Yamaha' state and allows to control it.
 
-<p align="center"><a href="./documentation/images/thing-it-mobile-sonos-yamaha-.png"><img src="./documentation/images/thing-it-mobile-sonos-yamaha-.png" width="70%" height="70%"></a></p>
+<p align="center"><a href="./documentation/images/thing-it-mobile-sonos-yamaha.png"><img src="./documentation/images/thing-it-mobile-sonos-yamaha-.png" width="70%" height="70%"></a></p>
 
 ## Where to go from here ...
 
