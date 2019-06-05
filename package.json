@@ -1,9 +1,12 @@
 {
-  "name": "thing-it-device-yamaha",
+  "name": "@thing-it/device-yamaha",
   "version": "0.2.7",
   "description": "[thing-it-node] Device Plugin for Yamaha AV receivers.",
   "authors": "Klaus Berberich",
   "license": "MIT",
+  "scripts": {
+    "postversion": "git push && git push --tags && npm publish"
+  },
   "keywords": [
     "IoT",
     "thing-it",
@@ -14,7 +17,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/klausberberich/thing-it-device-yamaha"
+    "url": "https://github.com/thing-it/thing-it-device-yamaha"
   },
   "dependencies": {
     "q": "^1.4.1",
