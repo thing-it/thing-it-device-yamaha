@@ -176,6 +176,13 @@ function Yamaha() {
      */
     Yamaha.prototype.start = function () {
         var deferred = q.defer();
+
+        this.operationalState = {
+            status: 'PENDING',
+            message: 'Waiting for initialization...'
+        };
+        this.publishOperationalStateChange();
+
         this.initializeValues();
 
         this.state.updateInterval = ((this.configuration.updateInterval === undefined || 1000 > this.configuration.updateInterval)
@@ -195,8 +202,14 @@ function Yamaha() {
 
             this.scan();
         } else {
-            this.logInfo("Starting up simulated Yamaha.");
+            this.logInfo("Starting up simulated Yamaha.");            
             this.initiateSimulation();
+
+            this.operationalState = {
+                status: 'OK',
+                message: 'Yamaha successfully initialized'
+            }
+            this.publishOperationalStateChange();    
         }
 
         deferred.resolve();
@@ -229,7 +242,20 @@ function Yamaha() {
             this.logInfo("Connected to host " + this.configuration.name + " (" + this.configuration.host + ").");
             this.state.name = this.configuration.name;
             this.connect();
+
+            this.operationalState = {
+                status: 'OK',
+                message: 'Yamaha successfully initialized'
+            }
+            this.publishOperationalStateChange();    
         } catch (e) {
+
+            this.operationalState = {
+                status: 'ERROR',
+                message: 'Yamaha initialization error'
+            }
+            this.publishOperationalStateChange();
+    
             this.logError(e);
         }
     };
