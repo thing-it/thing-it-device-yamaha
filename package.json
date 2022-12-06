@@ -21,6 +21,6 @@
   },
   "dependencies": {
     "q": "^1.4.1",
-    "yamaha-nodejs": "^0.4.3"
+    "yamaha-nodejs": "^0.9.6"
   }
 }
